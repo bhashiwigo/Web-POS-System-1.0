@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'items': 'Item',
         'customers': 'Customer',
         'analysis': 'Analysis',
+        'users': 'User Management',
         'settings': 'Setting'
     };
 

@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const itemsGrid = document.getElementById('cart-items-grid');
     const searchInput = document.getElementById('cart-search-input');
     const orderList = document.getElementById('cart-order-items-list');
-    const categoryCards = document.querySelectorAll('.category-card');
+    const cartCategoryCarousel = document.getElementById('cart-category-carousel');
     
     const elSubtotal = document.getElementById('cart-subtotal');
     const elDiscount = document.getElementById('cart-discount');
@@ -38,9 +38,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Initialization ---
     function init() {
         if (orderIdLabel) orderIdLabel.textContent = "Order #" + DataStore.getNextOrderId().substring(1);
+        loadCategories();
         loadItems();
         loadCustomers();
     }
+
+    window.addEventListener('dataUpdated', () => {
+        loadCategories();
+        loadItems();
+        loadCustomers();
+    });
 
     // --- Items Display & Search & Filtering ---
     function loadItems() {
@@ -82,19 +89,49 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Category Click Handling
-    categoryCards.forEach(card => {
-        card.addEventListener('click', () => {
-            // Remove active from all
-            categoryCards.forEach(c => c.classList.remove('active-category'));
-            // Add active to clicked
+    function loadCategories() {
+        if (!cartCategoryCarousel) return;
+        const categories = DataStore.getCategories();
+        const items = DataStore.getItems();
+        
+        let html = '';
+        categories.forEach((cat, index) => {
+            const count = items.filter(item => item.category === cat.name).length;
+            // Set first category active if none selected
+            if (index === 0 && !categories.find(c => c.name === currentCategory)) {
+                currentCategory = cat.name;
+            }
+            const activeClass = cat.name === currentCategory ? 'active-category' : '';
+            
+            html += `
+                <div class="category-card ${activeClass}" data-category="${cat.name}">
+                    <div class="category-info">
+                        <h3 class="category-name">${cat.name}</h3>
+                        <p class="category-count">${count} Items</p>
+                        <span class="status-badge">Available</span>
+                    </div>
+                    <div class="category-image">
+                        <i class="${cat.icon}" style="font-size:28px;color:#5A1210;opacity:0.6;"></i>
+                    </div>
+                </div>
+            `;
+        });
+        cartCategoryCarousel.innerHTML = html;
+    }
+
+    if (cartCategoryCarousel) {
+        cartCategoryCarousel.addEventListener('click', (e) => {
+            const card = e.target.closest('.category-card');
+            if (!card) return;
+
+            cartCategoryCarousel.querySelectorAll('.category-card').forEach(c => c.classList.remove('active-category'));
             card.classList.add('active-category');
             
             currentCategory = card.getAttribute('data-category');
             if (searchInput) searchInput.value = ''; // clear search on category change
             filterAndRenderItems();
         });
-    });
+    }
 
     // Cart Add Logic
     function addToCart(itemId) {
@@ -227,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Save Transaction
-            DataStore.addTransaction(netTotal);
+            DataStore.addTransaction(netTotal, cartItems);
             DataStore.addSaleToChart(netTotal); // update chart stats immediately
 
             // Reset UI

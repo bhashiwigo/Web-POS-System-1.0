@@ -1,9 +1,18 @@
 class DataStore {
     // Initialize default data if none exists
     static init() {
+        if (!localStorage.getItem('categories')) {
+            localStorage.setItem('categories', JSON.stringify([
+                { name: 'Coffee', icon: 'fa-solid fa-mug-hot' },
+                { name: 'Tea', icon: 'fa-solid fa-leaf' },
+                { name: 'Snacks', icon: 'fa-solid fa-cookie-bite' },
+                { name: 'Macha', icon: 'fa-solid fa-seedling' }
+            ]));
+        }
+
         if (!localStorage.getItem('users')) {
             localStorage.setItem('users', JSON.stringify([
-                { username: 'admin', password: '1234', role: 'Manager', name: 'Bhashi' }
+                { username: 'admin', password: '1234', role: 'Manager', name: 'Bhashi', contact: '0712345678' }
             ]));
         }
 
@@ -47,6 +56,21 @@ class DataStore {
                 revenue: [120, 190, 300, 250, 400, 350, 500]
             }));
         }
+
+        if (!localStorage.getItem('settings')) {
+            localStorage.setItem('settings', JSON.stringify({
+                businessName: 'Serenity POS',
+                contactInfo: 'info@gmail.com',
+                timezone: 'UTC+5:30',
+                currency: 'LKR',
+                language: 'en',
+                paymentMethods: {
+                    cash: true,
+                    card: true,
+                    mobileWallet: true
+                }
+            }));
+        }
     }
 
     // --- Users ---
@@ -56,6 +80,30 @@ class DataStore {
     
     static saveUsers(users) {
         localStorage.setItem('users', JSON.stringify(users));
+        window.dispatchEvent(new Event('usersUpdated'));
+    }
+
+    static addUser(userObj) {
+        const users = this.getUsers();
+        if (users.find(u => u.username === userObj.username)) return false;
+        users.push(userObj);
+        this.saveUsers(users);
+        return true;
+    }
+
+    static updateUser(originalUsername, updatedUserObj) {
+        const users = this.getUsers();
+        const index = users.findIndex(u => u.username === originalUsername);
+        if (index === -1) return false;
+        users[index] = updatedUserObj;
+        this.saveUsers(users);
+        return true;
+    }
+
+    static deleteUser(username) {
+        let users = this.getUsers();
+        users = users.filter(u => u.username !== username);
+        this.saveUsers(users);
     }
 
     static getActiveUser() {
@@ -80,7 +128,7 @@ class DataStore {
         return 'T' + String(transactions.length + 1).padStart(3, '0');
     }
 
-    static addTransaction(amount) {
+    static addTransaction(amount, cartItems = []) {
         const transactions = this.getTransactions();
         const activeUser = this.getActiveUser();
         const userName = activeUser ? activeUser.name : 'Unknown';
@@ -95,6 +143,19 @@ class DataStore {
         transactions.unshift(newTx); // Add to beginning
         localStorage.setItem('transactions', JSON.stringify(transactions));
         
+        // Update item sales
+        if (cartItems && cartItems.length > 0) {
+            const allItems = this.getItems();
+            cartItems.forEach(cartItem => {
+                const itemIndex = allItems.findIndex(i => i.id === cartItem.item.id);
+                if (itemIndex !== -1) {
+                    allItems[itemIndex].sales = (allItems[itemIndex].sales || 0) + cartItem.quantity;
+                }
+            });
+            localStorage.setItem('items', JSON.stringify(allItems));
+            window.dispatchEvent(new Event('dataUpdated'));
+        }
+
         // Notify listeners (Dashboard)
         window.dispatchEvent(new Event('transactionAdded'));
         return newTx;
@@ -121,9 +182,38 @@ class DataStore {
         return refundedTx;
     }
 
+    // --- Categories ---
+    static getCategories() {
+        return JSON.parse(localStorage.getItem('categories')) || [];
+    }
+
+    static addCategory(name, icon) {
+        const categories = this.getCategories();
+        const newCategory = { name, icon };
+        categories.push(newCategory);
+        localStorage.setItem('categories', JSON.stringify(categories));
+        window.dispatchEvent(new Event('dataUpdated'));
+        return newCategory;
+    }
+
     // --- Items ---
     static getItems() {
         return JSON.parse(localStorage.getItem('items')) || [];
+    }
+
+    static addItem(name, price, category) {
+        const items = this.getItems();
+        const newItem = {
+            id: 'I' + String(items.length + 1).padStart(3, '0'),
+            name: name,
+            sales: 0,
+            price: parseFloat(price),
+            category: category
+        };
+        items.push(newItem);
+        localStorage.setItem('items', JSON.stringify(items));
+        window.dispatchEvent(new Event('dataUpdated'));
+        return newItem;
     }
 
     // --- Customers ---
@@ -140,7 +230,15 @@ class DataStore {
         };
         customers.push(newCustomer);
         localStorage.setItem('customers', JSON.stringify(customers));
+        window.dispatchEvent(new Event('dataUpdated'));
         return newCustomer;
+    }
+
+    static deleteCustomer(id) {
+        let customers = this.getCustomers();
+        customers = customers.filter(c => c.id !== id);
+        localStorage.setItem('customers', JSON.stringify(customers));
+        window.dispatchEvent(new Event('dataUpdated'));
     }
 
     // --- Chart Data ---
@@ -154,6 +252,16 @@ class DataStore {
         data.revenue[data.revenue.length - 1] += amount;
         localStorage.setItem('salesData', JSON.stringify(data));
         window.dispatchEvent(new Event('chartDataUpdated'));
+    }
+
+    // --- Settings ---
+    static getSettings() {
+        return JSON.parse(localStorage.getItem('settings'));
+    }
+
+    static saveSettings(settings) {
+        localStorage.setItem('settings', JSON.stringify(settings));
+        window.dispatchEvent(new Event('settingsUpdated'));
     }
 }
 
