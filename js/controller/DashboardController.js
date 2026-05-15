@@ -4,13 +4,42 @@ document.addEventListener("DOMContentLoaded", () => {
     let salesChartInstance = null;
     let pieChartInstance = null;
 
-    function initCharts() {
-        const salesData = DataStore.getSalesData();
-        if (!salesData) return;
+    // Helper: format a Date as "12 May"
+    function formatDateLabel(date) {
+        return date.getDate() + ' ' + date.toLocaleString('en-US', { month: 'short' });
+    }
 
-        // Line Chart
+    function buildSalesChartData() {
+        const txs = DataStore.getTransactions();
+
+        // Build last 7 days
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - i);
+            days.push(d);
+        }
+
+        const revenue = days.map(day => {
+            const dayStart = day.getTime();
+            const dayEnd = dayStart + 86400000;
+            return txs
+                .filter(tx => tx.timestamp >= dayStart && tx.timestamp < dayEnd)
+                .reduce((sum, tx) => sum + tx.amount, 0);
+        });
+
+        return {
+            labels: days.map(formatDateLabel),
+            revenue
+        };
+    }
+
+    function initCharts() {
+        // ---- Line Chart ----
         const ctxSales = document.getElementById('salesChart');
         if (ctxSales) {
+            const salesData = buildSalesChartData();
             if (salesChartInstance) salesChartInstance.destroy();
             salesChartInstance = new Chart(ctxSales, {
                 type: 'line',
@@ -23,7 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         backgroundColor: 'rgba(139, 38, 32, 0.1)',
                         borderWidth: 2,
                         tension: 0.4,
-                        fill: true
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#8B2620'
                     }]
                 },
                 options: {
@@ -40,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Pie Chart
+        // ---- Pie / Doughnut Chart ----
         const ctxPie = document.getElementById('pieChart');
         if (ctxPie) {
             const items = DataStore.getItems();
@@ -51,14 +82,14 @@ document.addEventListener("DOMContentLoaded", () => {
             
             items.forEach(item => {
                 if (categorySales[item.category] !== undefined) {
-                    categorySales[item.category] += item.sales; // based on quantity sold
+                    categorySales[item.category] += item.sales;
                 } else {
                     categorySales[item.category] = item.sales;
                 }
             });
 
-            const labels = Object.keys(categorySales);
-            const data = Object.values(categorySales);
+            const labels = Object.keys(categorySales).filter(k => categorySales[k] > 0);
+            const data   = labels.map(k => categorySales[k]);
             
             const baseColors = ['#8B2620', '#DFAFAF', '#3E2A23', '#C47A60', '#F5E4E4', '#5C3605'];
             const bgColors = labels.map((_, i) => baseColors[i % baseColors.length]);
@@ -67,20 +98,24 @@ document.addEventListener("DOMContentLoaded", () => {
             pieChartInstance = new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: bgColors,
-                        borderWidth: 0
-                    }]
+                    labels,
+                    datasets: [{ data, backgroundColor: bgColors, borderWidth: 0 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: 4 },
                     plugins: {
-                        legend: { position: 'bottom' }
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { size: 11 }
+                            }
+                        }
                     },
-                    cutout: '70%'
+                    cutout: '65%'
                 }
             });
         }
@@ -145,14 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateMetrics() {
         const elTotalRev = document.getElementById('metric-total-revenue');
         const elTodayRev = document.getElementById('metric-today-revenue');
-        const elOnProg = document.getElementById('metric-on-progress');
-        const elOnProgStat = document.getElementById('metric-on-progress-status');
+        const elOnProg   = document.getElementById('metric-on-progress');
         const elLowStock = document.getElementById('metric-low-stock');
 
         const txs = DataStore.getTransactions();
         let totalRevenue = 0;
         let todayRevenue = 0;
-        let todayOrders = 0;
+        let todayOrders  = 0;
 
         const startOfToday = new Date();
         startOfToday.setHours(0,0,0,0);
@@ -168,15 +202,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (elTotalRev) elTotalRev.textContent = `$ ${totalRevenue.toFixed(2)}`;
         if (elTodayRev) elTodayRev.textContent = `$ ${todayRevenue.toFixed(2)}`;
-        if (elOnProg) elOnProg.innerHTML = `${todayOrders} <span class="subtitle">Orders</span>`;
-        if (elOnProgStat) elOnProgStat.textContent = todayOrders > 0 ? "Good" : "Pending";
+        if (elOnProg)   elOnProg.innerHTML = `${todayOrders} <span class="subtitle">Orders</span>`;
 
-        let lowStockCount = 0;
+        // Low stock: items where qty < 10
         const items = DataStore.getItems();
-        items.forEach(item => {
-            // Mock low stock threshold (e.g. if we sold more than 100, we might be low)
-            if (item.sales > 100) lowStockCount++; 
-        });
+        const lowStockCount = items.filter(item => (item.qty ?? 0) < 10).length;
         if (elLowStock) elLowStock.textContent = String(lowStockCount).padStart(2, '0');
     }
 
@@ -186,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateTransactionsList();
         updateFastMovingItems();
         updateMetrics();
-        initCharts();
+        initCharts();  // rebuild line chart from fresh transaction data
     });
 
     // Initial Load

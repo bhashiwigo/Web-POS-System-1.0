@@ -6,16 +6,17 @@ class CustomerController {
     }
 
     initElements() {
-        this.tableBody = document.getElementById('customers-table-body');
-        
+        this.tableBody          = document.getElementById('customers-table-body');
         this.btnAddCustomerMain = document.getElementById('btn-add-customer-main');
         this.addCustomerOverlay = document.getElementById('add-customer-overlay');
-        this.addCustomerForm = document.getElementById('add-customer-form');
-        this.btnCancelCustomer = document.getElementById('btn-cancel-customer');
+        this.addCustomerForm    = document.getElementById('add-customer-form');
+        this.btnCancelCustomer  = document.getElementById('btn-cancel-customer');
+        this.searchInput        = document.getElementById('customers-search-input');
+        this.btnSearch          = document.getElementById('btn-search-customers');
     }
 
     bindEvents() {
-        // Open modal from main page
+        // Open Add Customer modal
         if (this.btnAddCustomerMain) {
             this.btnAddCustomerMain.addEventListener('click', () => {
                 this.addCustomerOverlay.style.display = 'flex';
@@ -26,79 +27,121 @@ class CustomerController {
         if (this.btnCancelCustomer) {
             this.btnCancelCustomer.addEventListener('click', () => {
                 this.addCustomerOverlay.style.display = 'none';
-                if(this.addCustomerForm) this.addCustomerForm.reset();
+                if (this.addCustomerForm) this.addCustomerForm.reset();
             });
         }
 
-        // Add Customer Form Submit
+        // Add Customer — with validation
         if (this.addCustomerForm) {
-            // Remove previous listeners if any to prevent duplicate submissions
-            // A simple clone and replace helps if another controller attached something, 
-            // but we'll assume this controller manages the main customer logic.
             this.addCustomerForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const name = document.getElementById('new-customer-name').value;
-                const contact = document.getElementById('new-customer-contact').value;
-                
-                DataStore.addCustomer(name, contact);
-                NotificationService.show('Customer added successfully!', 'success');
-                
+
+                const nameEl    = document.getElementById('new-customer-name');
+                const contactEl = document.getElementById('new-customer-contact');
+                const addressEl = document.getElementById('new-customer-address');
+                const emailEl   = document.getElementById('new-customer-email');
+
+                const name    = nameEl    ? nameEl.value.trim()    : '';
+                const contact = contactEl ? contactEl.value.trim() : '';
+                const address = addressEl ? addressEl.value.trim() : '';
+                const email   = emailEl   ? emailEl.value.trim()   : '';
+
+                if (!name)    { NotificationService.showToast('Customer name is required.', 'error');   return; }
+                if (!contact) { NotificationService.showToast('Contact number is required.', 'error'); return; }
+                if (!address) { NotificationService.showToast('Address is required.', 'error');         return; }
+                if (!email)   { NotificationService.showToast('Email is required.', 'error');           return; }
+
+                DataStore.addCustomer(name, contact, address, email);
+                NotificationService.showToast('Customer added successfully!', 'success');
+
                 this.addCustomerOverlay.style.display = 'none';
                 this.addCustomerForm.reset();
             });
         }
 
-        // Listen for data updates to re-render table
-        window.addEventListener('dataUpdated', () => {
-            this.renderCustomers();
-        });
+        // Real-time search: filter by ID or Name (case-insensitive)
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', () => this.applySearch());
+        }
+        if (this.btnSearch) {
+            this.btnSearch.addEventListener('click', () => this.applySearch());
+        }
 
-        // Event delegation for delete buttons
+        // Re-render on data changes
+        window.addEventListener('dataUpdated', () => this.renderCustomers());
+
+        // Delete via event delegation
         if (this.tableBody) {
             this.tableBody.addEventListener('click', (e) => {
-                if (e.target.classList.contains('fa-trash-can')) {
-                    const tr = e.target.closest('tr');
-                    const id = tr.dataset.id;
+                const trashIcon = e.target.closest('.action-icon[data-action="delete"]');
+                if (trashIcon) {
+                    const tr = trashIcon.closest('tr');
+                    const id = tr ? tr.dataset.id : null;
                     if (id && confirm('Are you sure you want to delete this customer?')) {
                         DataStore.deleteCustomer(id);
-                        NotificationService.show('Customer deleted.', 'success');
+                        NotificationService.showToast('Customer deleted.', 'success');
                     }
                 }
             });
         }
     }
 
+    applySearch() {
+        if (!this.tableBody || !this.searchInput) return;
+        const query = this.searchInput.value.trim().toLowerCase();
+        const rows  = this.tableBody.querySelectorAll('tr[data-id]');
+
+        rows.forEach(row => {
+            const id   = (row.dataset.id   || '').toLowerCase();
+            const name = (row.dataset.name || '').toLowerCase();
+            const matches = !query || id.includes(query) || name.includes(query);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+
     renderCustomers() {
         if (!this.tableBody) return;
-        
+
         const customers = DataStore.getCustomers();
-        let html = '';
-        
+
         if (customers.length === 0) {
-            html = `<tr><td colspan="6" style="text-align:center;">No customers found.</td></tr>`;
-        } else {
-            customers.forEach(customer => {
-                html += `
-                    <tr data-id="${customer.id}">
-                        <td>${customer.id}</td>
-                        <td>${customer.name}</td>
-                        <td>-</td>
-                        <td>${customer.contact}</td>
-                        <td>-</td>
-                        <td class="action-cell">
-                            <i class="fa-regular fa-pen-to-square action-icon" title="Edit"></i>
-                            <i class="fa-regular fa-trash-can action-icon" title="Delete" style="color: #d9534f;"></i>
-                        </td>
-                    </tr>
-                `;
-            });
+            this.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: var(--color-text-light);">No customers found.</td></tr>`;
+            return;
         }
-        
-        this.tableBody.innerHTML = html;
+
+        let html = '';
+        customers.forEach(customer => {
+            const name    = customer.name    || '';
+            const contact = customer.contact || '';
+            const address = customer.address || '-';
+            const email   = customer.email   || '-';
+
+            // Skip truly empty ghost entries
+            if (!name && !contact) return;
+
+            html += `
+                <tr data-id="${customer.id}" data-name="${name.toLowerCase()}">
+                    <td>${customer.id}</td>
+                    <td>${name}</td>
+                    <td>${address}</td>
+                    <td>${contact}</td>
+                    <td>${email}</td>
+                    <td class="action-cell">
+                        <i class="fa-regular fa-pen-to-square action-icon" title="Edit"></i>
+                        <i class="fa-regular fa-trash-can action-icon" title="Delete"
+                           data-action="delete" style="color: #d9534f;"></i>
+                    </td>
+                </tr>
+            `;
+        });
+
+        this.tableBody.innerHTML = html || `<tr><td colspan="6" style="text-align:center; padding: 20px; color: var(--color-text-light);">No customers found.</td></tr>`;
+
+        // Re-apply current search filter after re-render
+        this.applySearch();
     }
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new CustomerController();
 });

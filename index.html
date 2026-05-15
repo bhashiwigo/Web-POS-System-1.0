@@ -12,6 +12,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+      (function(){
+         emailjs.init({
+           publicKey: "S5jhNzYMlLMEKVU-k",
+         });
+      })();
+    </script>
+
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -61,11 +72,19 @@
                             <label>Username</label>
                             <input type="text" id="reset-username" placeholder="Enter Username" required>
                         </div>
+                        <div style="display: flex; gap: 16px; margin-top: 32px; justify-content: center;">
+                            <button type="button" class="login-btn btn-cancel-reset" style="margin: 0; width: 120px;">Cancel</button>
+                            <button type="button" id="btn-send-otp" class="login-btn" style="margin: 0; width: 120px;">Send OTP</button>
+                        </div>
                     </div>
                     <div id="fp-step-2" style="display: none;">
                         <div class="input-field">
                             <label>Security OTP</label>
                             <input type="text" id="reset-otp" placeholder="Enter 4-digit OTP">
+                        </div>
+                        <div style="display: flex; gap: 16px; margin-top: 32px; justify-content: center;">
+                            <button type="button" class="login-btn btn-cancel-reset" style="margin: 0; width: 120px;">Cancel</button>
+                            <button type="button" id="btn-verify-otp" class="login-btn" style="margin: 0; width: 120px;">Verify OTP</button>
                         </div>
                     </div>
                     <div id="fp-step-3" style="display: none;">
@@ -73,10 +92,10 @@
                             <label>New Password</label>
                             <input type="password" id="reset-new-password" placeholder="Enter New Password">
                         </div>
-                    </div>
-                    <div style="display: flex; gap: 16px; margin-top: 32px; justify-content: center;">
-                        <button type="button" id="btn-cancel-reset" class="login-btn" style="margin: 0; width: 120px;">Cancel</button>
-                        <button type="submit" id="btn-reset-password" class="login-btn" style="margin: 0; width: 120px;">Next</button>
+                        <div style="display: flex; gap: 16px; margin-top: 32px; justify-content: center;">
+                            <button type="button" class="login-btn btn-cancel-reset" style="margin: 0; width: 120px;">Cancel</button>
+                            <button type="button" id="btn-reset-password" class="login-btn" style="margin: 0; width: 120px;">Reset Password</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -100,6 +119,10 @@
                     <div class="input-field">
                         <label>Username</label>
                         <input type="text" id="user-username" placeholder="Enter Username" required>
+                    </div>
+                    <div class="input-field">
+                        <label>Email</label>
+                        <input type="email" id="user-email" placeholder="Enter Email" required>
                     </div>
                     <div class="input-field">
                         <label>Password</label>
@@ -142,6 +165,14 @@
                     <div class="input-field">
                         <label>Contact Number</label>
                         <input type="text" id="new-customer-contact" placeholder="Enter Contact" required>
+                    </div>
+                    <div class="input-field">
+                        <label>Address</label>
+                        <input type="text" id="new-customer-address" placeholder="Enter Address" required>
+                    </div>
+                    <div class="input-field">
+                        <label>Email</label>
+                        <input type="email" id="new-customer-email" placeholder="Enter Email" required>
                     </div>
                     <div style="display: flex; gap: 16px; margin-top: 32px; justify-content: center;">
                         <button type="button" id="btn-cancel-customer" class="login-btn" style="margin: 0; width: 120px;">Cancel</button>
@@ -256,10 +287,7 @@
                                         <h3 class="metric-title">On Progress</h3>
                                         <div class="metric-value" id="metric-on-progress">0 <span class="subtitle">Orders</span></div>
                                     </div>
-                                    <div class="metric-card dark-gradient">
-                                        <h3 class="metric-title">On Progress Status</h3>
-                                        <div class="metric-value" id="metric-on-progress-status" style="font-size: 26px;">Pending</div>
-                                    </div>
+
                                     <div class="metric-card dark-gradient">
                                         <h3 class="metric-title">Low Stock Alerts</h3>
                                         <div class="metric-value right-align" id="metric-low-stock">0</div>
@@ -276,7 +304,7 @@
                                     </div>
                                     <div class="chart-card pie-chart-container">
                                         <h3 class="chart-title">Sales by Category</h3>
-                                        <div class="chart-canvas-wrapper" style="width: 180px; height: 180px;">
+                                        <div class="chart-canvas-wrapper" style="flex: 1; width: 100%; height: 0; min-height: 160px;">
                                             <canvas id="pieChart"></canvas>
                                         </div>
                                     </div>
@@ -465,7 +493,6 @@
                             <div class="category-section-wrapper">
                                 <div class="section-header">
                                     <h3 class="section-title">Category</h3>
-                                    <span class="see-all-link">See All</span>
                                 </div>
                                 <div class="category-carousel">
                                     <div class="category-card active-category" data-category="Coffee">
@@ -518,7 +545,6 @@
                             <div class="items-section-wrapper">
                                 <div class="section-header">
                                     <h3 class="section-title">Items</h3>
-                                    <span class="see-all-link">See All</span>
                                 </div>
                                 <div class="items-grid full-width" id="items-grid">
                                     <div class="item-card">
@@ -594,12 +620,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="customers-table-body">
-                                        <tr><td>001</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
-                                        <tr><td>002</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
-                                        <tr><td>003</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
-                                        <tr><td>004</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
-                                        <tr><td>005</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
-                                        <tr><td>006</td><td></td><td></td><td></td><td></td><td class="action-cell"><i class="fa-regular fa-pen-to-square action-icon"></i><i class="fa-regular fa-trash-can action-icon"></i></td></tr>
+                                        <!-- dynamically rendered by CustomerController.js -->
                                     </tbody>
                                 </table>
                             </div>
@@ -609,17 +630,21 @@
                              ANALYSIS
                              ================================================ -->
                         <section id="analysis" class="view-section">
+
+                            <!-- ── Filter Bar ── -->
                             <div class="analysis-filters">
                                 <div class="date-pickers">
-                                    <label>From : <input type="date" id="analysis-date-from" value="2026-03-01"></label>
-                                    <label>To : <input type="date" id="analysis-date-to" value="2026-03-22"></label>
+                                    <label>From: <input type="date" id="analysis-date-from"></label>
+                                    <label>To: <input type="date" id="analysis-date-to"></label>
                                 </div>
-                                <button class="btn-primary" id="btn-generate-report" style="background: var(--color-gradient-card);">
-                                    Generate Report
-                                </button>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn-primary" id="btn-generate-report" style="background: var(--color-gradient-card);">Apply Filter</button>
+                                    <button class="btn-primary" id="btn-reset-filter" style="background: transparent; border: 1px solid var(--color-card-border); color: var(--color-text-dark);">Reset</button>
+                                </div>
                             </div>
 
-                            <div class="charts-row" style="margin-bottom: 18px;">
+                            <!-- ── Charts Row ── -->
+                            <div class="charts-row" style="margin-bottom: 18px; flex-shrink: 0;">
                                 <div class="chart-card line-chart-container">
                                     <h3 class="chart-title">Sales Statistics</h3>
                                     <div class="chart-canvas-wrapper">
@@ -627,28 +652,33 @@
                                     </div>
                                 </div>
                                 <div class="chart-card pie-chart-container">
-                                    <div class="chart-canvas-wrapper" style="width: 180px; height: 180px;">
+                                    <h3 class="chart-title">Sales by Category</h3>
+                                    <div class="chart-canvas-wrapper" style="flex:1; width:100%; height:0; min-height:160px;">
                                         <canvas id="analysisPieChart"></canvas>
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- ── Bottom Row: Metrics + Table ── -->
                             <div class="analysis-bottom-row">
+
+                                <!-- Left: metric cards -->
                                 <div class="analysis-metrics">
                                     <div class="metric-card dark-gradient">
-                                        <h3 class="metric-title">Total Revenue <span class="subtitle">(Last Week)</span></h3>
-                                        <div class="metric-value" style="font-size: 28px;">$ 2,375.00</div>
+                                        <h3 class="metric-title">Total Revenue</h3>
+                                        <div class="metric-value" id="analysis-total-revenue" style="font-size: 26px;">$ 0.00</div>
                                     </div>
                                     <div class="metric-card dark-gradient">
                                         <h3 class="metric-title">Today Revenue</h3>
-                                        <div class="metric-value" style="font-size: 28px;">$ 1,512.00</div>
+                                        <div class="metric-value" id="analysis-today-revenue" style="font-size: 26px;">$ 0.00</div>
                                     </div>
                                     <div class="metric-card dark-gradient">
                                         <h3 class="metric-title">Low Stock Alerts</h3>
-                                        <div class="metric-value right-align" style="font-size: 36px;">07</div>
+                                        <div class="metric-value right-align" id="analysis-low-stock" style="font-size: 36px;">00</div>
                                     </div>
                                 </div>
 
+                                <!-- Right: Orders table -->
                                 <div class="data-table-container analysis-table-container">
                                     <table class="data-table" id="analysis-table">
                                         <thead>
@@ -663,15 +693,11 @@
                                             </tr>
                                         </thead>
                                         <tbody id="analysis-table-body">
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                                            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                                            <!-- dynamically rendered by AnalysisController.js -->
                                         </tbody>
                                     </table>
                                 </div>
+
                             </div>
                         </section>
 
@@ -679,25 +705,22 @@
                              USERS
                              ================================================ -->
                         <section id="users" class="view-section">
-                            <div class="section-header">
-                                <div class="search-bar glass-panel" style="max-width: 400px; display: flex; align-items: center; padding: 0 15px; border-radius: 20px;">
-                                    <i class="fa-solid fa-search" style="color: var(--color-text-light);"></i>
-                                    <input type="text" id="users-search-input" placeholder="Search users..." style="border: none; background: transparent; padding: 12px; outline: none; width: 100%; color: var(--color-text-dark);">
-                                </div>
-                                <button class="btn-primary" id="btn-show-add-user" style="display: flex; align-items: center; gap: 8px;">
+                            <div class="section-header" style="justify-content: flex-end;">
+                                <button class="btn-action btn-action-primary" id="btn-show-add-user" style="display: flex; align-items: center; gap: 8px;">
                                     <i class="fa-solid fa-plus"></i> Add User
                                 </button>
                             </div>
 
-                            <div class="table-container glass-panel">
+                            <div class="data-table-container">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
                                             <th>Name</th>
                                             <th>Username</th>
+                                            <th>Email</th>
                                             <th>Role</th>
                                             <th>Contact Number</th>
-                                            <th style="text-align: right;">Action</th>
+                                            <th style="text-align: center;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="users-table-body">
@@ -848,6 +871,25 @@
                 </main>
             </div><!-- /app-container -->
         </div><!-- /app-wrapper -->
+        <!-- ================================================
+             LOGOUT CONFIRMATION MODAL
+             ================================================ -->
+        <div id="logout-modal-overlay" class="modal-overlay" style="display: none;">
+            <div class="logout-confirm-card glass-panel">
+                <div class="logout-confirm-icon">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </div>
+                <h2 class="logout-confirm-title">Logging Out?</h2>
+                <p class="logout-confirm-msg">Are you sure you want to log out of Serenity POS?</p>
+                <div class="logout-confirm-actions">
+                    <button id="btn-cancel-logout" class="logout-btn-cancel">Cancel</button>
+                    <button id="btn-confirm-logout" class="logout-btn-confirm">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Yes, Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div><!-- /main-app-view -->
 
     <!-- =====================================================================

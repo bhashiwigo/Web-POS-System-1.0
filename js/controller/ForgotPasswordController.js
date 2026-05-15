@@ -1,10 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const forgotPasswordLink = document.getElementById("forgot-password-link");
     const overlay = document.getElementById("forgot-password-overlay");
-    const cancelBtn = document.getElementById("btn-cancel-reset");
     const resetForm = document.getElementById("forgot-password-form");
 
-    if (forgotPasswordLink && overlay && cancelBtn && resetForm) {
+    if (forgotPasswordLink && overlay && resetForm) {
         
         // Open Modal
         forgotPasswordLink.addEventListener("click", (e) => {
@@ -12,39 +11,57 @@ document.addEventListener("DOMContentLoaded", () => {
             overlay.style.display = "flex";
         });
 
-        let resetStep = 1;
         const step1 = document.getElementById("fp-step-1");
         const step2 = document.getElementById("fp-step-2");
         const step3 = document.getElementById("fp-step-3");
         
+        const usernameInput = document.getElementById("reset-username");
         const otpInput = document.getElementById("reset-otp");
-        const btnReset = document.getElementById("btn-reset-password");
-        let currentMockOTP = "1234";
+        const newPasswordInput = document.getElementById("reset-new-password");
+
+        const btnSendOtp = document.getElementById("btn-send-otp");
+        const btnVerifyOtp = document.getElementById("btn-verify-otp");
+        const btnResetPassword = document.getElementById("btn-reset-password");
+        const cancelBtns = document.querySelectorAll(".btn-cancel-reset");
+
+        let currentMockOTP = "";
+        let currentUsername = "";
 
         function resetModalState() {
-            resetStep = 1;
             if (step1) step1.style.display = "block";
             if (step2) step2.style.display = "none";
             if (step3) step3.style.display = "none";
-            if (btnReset) btnReset.textContent = "Next";
+            if (btnSendOtp) {
+                btnSendOtp.textContent = "Send OTP";
+                btnSendOtp.disabled = false;
+            }
+            currentMockOTP = "";
+            currentUsername = "";
         }
 
-        // Close Modal
-        cancelBtn.addEventListener("click", () => {
-            overlay.style.display = "none";
-            resetForm.reset();
-            resetModalState();
+        // Close Modal Handlers
+        cancelBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                overlay.style.display = "none";
+                resetForm.reset();
+                resetModalState();
+            });
         });
 
-        // Handle Reset
-        resetForm.addEventListener("submit", async (e) => {
+        // Prevent default form submission from reloading page if enter is pressed
+        resetForm.addEventListener("submit", (e) => {
             e.preventDefault();
-            
-            const username = document.getElementById("reset-username").value;
-            const newPassword = document.getElementById("reset-new-password").value;
+        });
 
-            if (resetStep === 1) {
-                // Check if user exists to simulate OTP
+        // Step 1: Send OTP
+        if (btnSendOtp) {
+            btnSendOtp.addEventListener("click", async () => {
+                const username = usernameInput.value.trim();
+                if (!username) {
+                    NotificationService.showToast("Please enter a username.", "error");
+                    return;
+                }
+
                 const users = DataStore.getUsers();
                 const user = users.find(u => u.username === username);
                 
@@ -53,21 +70,51 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                const contact = user.contact || "Unknown Number";
-                currentMockOTP = Math.floor(1000 + Math.random() * 9000).toString(); // Generate random 4-digit OTP
-                
-                NotificationService.showToast(`OTP sent to ${contact}. Mock OTP: ${currentMockOTP}`, "info");
-                
-                if (step1) step1.style.display = "none";
-                if (step2) step2.style.display = "block";
-                if (otpInput) otpInput.required = true;
-                if (btnReset) btnReset.textContent = "Verify";
-                resetStep = 2;
-                return;
-            }
+                if (!user.email) {
+                    NotificationService.showToast("No registered email found for this user.", "error");
+                    return;
+                }
 
-            if (resetStep === 2) {
-                const otp = otpInput ? otpInput.value : "";
+                currentUsername = username;
+                currentMockOTP = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                btnSendOtp.textContent = "Sending...";
+                btnSendOtp.disabled = true;
+
+                try {
+                    const templateParams = {
+                        to_name: user.name || user.username,
+                        to_email: user.email,
+                        otp_code: currentMockOTP
+                    };
+                    
+                    // Replace YOUR_SERVICE_ID and YOUR_TEMPLATE_ID with actual keys
+                    await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams);
+
+                    NotificationService.showToast(`OTP sent to ${user.email}.`, "success");
+                    
+                    if (step1) step1.style.display = "none";
+                    if (step2) step2.style.display = "block";
+                    
+                } catch (error) {
+                    console.error("EmailJS Error:", error);
+                    NotificationService.showToast("Failed to send OTP email.", "error");
+                    btnSendOtp.textContent = "Send OTP";
+                    btnSendOtp.disabled = false;
+                }
+            });
+        }
+
+        // Step 2: Verify OTP
+        if (btnVerifyOtp) {
+            btnVerifyOtp.addEventListener("click", () => {
+                const otp = otpInput ? otpInput.value.trim() : "";
+                
+                if (!otp) {
+                    NotificationService.showToast("Please enter the OTP.", "error");
+                    return;
+                }
+
                 if (otp !== currentMockOTP) {
                     NotificationService.showToast("Invalid OTP. Try again.", "error");
                     return;
@@ -76,14 +123,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 NotificationService.showToast("OTP Verified!", "success");
                 if (step2) step2.style.display = "none";
                 if (step3) step3.style.display = "block";
-                if (otpInput) otpInput.required = false;
-                if (btnReset) btnReset.textContent = "Reset";
-                resetStep = 3;
-                return;
-            }
+            });
+        }
 
-            if (resetStep === 3) {
-                const success = await UserBO.resetPassword(username, newPassword);
+        // Step 3: Reset Password
+        if (btnResetPassword) {
+            btnResetPassword.addEventListener("click", async () => {
+                const newPassword = newPasswordInput.value;
+                
+                if (!newPassword) {
+                    NotificationService.showToast("Please enter a new password.", "error");
+                    return;
+                }
+
+                const success = await UserBO.resetPassword(currentUsername, newPassword);
 
                 if (success) {
                     NotificationService.showToast("Password reset successfully!", "success");
@@ -94,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     NotificationService.showToast("Failed to reset password.", "error");
                     resetModalState();
                 }
-            }
-        });
+            });
+        }
     }
 });

@@ -1,44 +1,41 @@
 class DataStore {
-    // Initialize default data if none exists
+    // Initialize default data — items & categories always reset to defaults on load
     static init() {
-        if (!localStorage.getItem('categories')) {
-            localStorage.setItem('categories', JSON.stringify([
-                { name: 'Coffee', icon: 'fa-solid fa-mug-hot' },
-                { name: 'Tea', icon: 'fa-solid fa-leaf' },
-                { name: 'Snacks', icon: 'fa-solid fa-cookie-bite' },
-                { name: 'Macha', icon: 'fa-solid fa-seedling' }
-            ]));
-        }
+        localStorage.removeItem('categories');
+        localStorage.removeItem('items');
+
+        localStorage.setItem('categories', JSON.stringify([
+            { name: 'Coffee', icon: 'fa-solid fa-mug-hot' },
+            { name: 'Tea', icon: 'fa-solid fa-leaf' },
+            { name: 'Snacks', icon: 'fa-solid fa-cookie-bite' },
+            { name: 'Macha', icon: 'fa-solid fa-seedling' }
+        ]));
+
+        localStorage.setItem('items', JSON.stringify([
+            { id: 'I001', name: 'Espresso',              sales: 120, qty: 50, price: 4.50, category: 'Coffee' },
+            { id: 'I002', name: 'Latte',                 sales: 95,  qty: 30, price: 5.00, category: 'Coffee' },
+            { id: 'I003', name: 'Cappuccino',            sales: 110, qty: 20, price: 5.50, category: 'Coffee' },
+            { id: 'I004', name: 'Americano',             sales: 150, qty: 8,  price: 3.50, category: 'Coffee' },
+            { id: 'I005', name: 'Green Tea',             sales: 80,  qty: 40, price: 3.00, category: 'Tea'    },
+            { id: 'I006', name: 'Black Tea',             sales: 65,  qty: 25, price: 2.50, category: 'Tea'    },
+            { id: 'I007', name: 'Matcha Latte',          sales: 90,  qty: 15, price: 5.50, category: 'Tea'    },
+            { id: 'I008', name: 'Chai Tea',              sales: 45,  qty: 5,  price: 4.00, category: 'Tea'    },
+            { id: 'I009', name: 'Croissant',             sales: 200, qty: 60, price: 3.50, category: 'Snacks' },
+            { id: 'I010', name: 'Blueberry Muffin',      sales: 85,  qty: 35, price: 4.00, category: 'Snacks' },
+            { id: 'I011', name: 'Chocolate Chip Cookie', sales: 150, qty: 7,  price: 2.50, category: 'Snacks' },
+            { id: 'I012', name: 'Club Sandwich',         sales: 60,  qty: 3,  price: 7.50, category: 'Snacks' }
+        ]));
 
         if (!localStorage.getItem('users')) {
             localStorage.setItem('users', JSON.stringify([
-                { username: 'admin', password: '1234', role: 'Manager', name: 'Bhashi', contact: '0712345678' }
+                { username: 'admin', password: '1234', role: 'Manager', name: 'Bhashi', email: 'bhashiwigo@gmail.com', contact: '0712345678' }
             ]));
         }
 
         if (!localStorage.getItem('transactions')) {
             localStorage.setItem('transactions', JSON.stringify([
-                // Mock some initial transactions
                 { id: 'T001', amount: 15.00, user: 'Bhashi', timestamp: new Date().getTime() - 100000 },
                 { id: 'T002', amount: 45.50, user: 'Bhashi', timestamp: new Date().getTime() - 50000 }
-            ]));
-        }
-
-        const existingItems = JSON.parse(localStorage.getItem('items'));
-        if (!existingItems || existingItems.length === 0 || existingItems[0].category === undefined) {
-            localStorage.setItem('items', JSON.stringify([
-                { id: 'I001', name: 'Espresso', sales: 120, price: 4.50, category: 'Coffee' },
-                { id: 'I002', name: 'Latte', sales: 95, price: 5.00, category: 'Coffee' },
-                { id: 'I003', name: 'Cappuccino', sales: 110, price: 5.50, category: 'Coffee' },
-                { id: 'I004', name: 'Americano', sales: 150, price: 3.50, category: 'Coffee' },
-                { id: 'I005', name: 'Green Tea', sales: 80, price: 3.00, category: 'Tea' },
-                { id: 'I006', name: 'Black Tea', sales: 65, price: 2.50, category: 'Tea' },
-                { id: 'I007', name: 'Matcha Latte', sales: 90, price: 5.50, category: 'Tea' },
-                { id: 'I008', name: 'Chai Tea', sales: 45, price: 4.00, category: 'Tea' },
-                { id: 'I009', name: 'Croissant', sales: 200, price: 3.50, category: 'Snacks' },
-                { id: 'I010', name: 'Blueberry Muffin', sales: 85, price: 4.00, category: 'Snacks' },
-                { id: 'I011', name: 'Chocolate Chip Cookie', sales: 150, price: 2.50, category: 'Snacks' },
-                { id: 'I012', name: 'Club Sandwich', sales: 60, price: 7.50, category: 'Snacks' }
             ]));
         }
 
@@ -47,14 +44,6 @@ class DataStore {
                 { id: 'C001', name: 'John Doe', contact: '123-456-7890' },
                 { id: 'C002', name: 'Jane Smith', contact: '098-765-4321' }
             ]));
-        }
-
-        if (!localStorage.getItem('salesData')) {
-            // Mock chart data (labels and data points)
-            localStorage.setItem('salesData', JSON.stringify({
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                revenue: [120, 190, 300, 250, 400, 350, 500]
-            }));
         }
 
         if (!localStorage.getItem('settings')) {
@@ -77,7 +66,7 @@ class DataStore {
     static getUsers() {
         return JSON.parse(localStorage.getItem('users')) || [];
     }
-    
+
     static saveUsers(users) {
         localStorage.setItem('users', JSON.stringify(users));
         window.dispatchEvent(new Event('usersUpdated'));
@@ -142,7 +131,7 @@ class DataStore {
 
         transactions.unshift(newTx); // Add to beginning
         localStorage.setItem('transactions', JSON.stringify(transactions));
-        
+
         // Update item sales
         if (cartItems && cartItems.length > 0) {
             const allItems = this.getItems();
@@ -178,7 +167,7 @@ class DataStore {
 
         window.dispatchEvent(new Event('transactionAdded')); // Refresh lists
         window.dispatchEvent(new Event('chartDataUpdated')); // Refresh charts
-        
+
         return refundedTx;
     }
 
@@ -194,6 +183,13 @@ class DataStore {
         localStorage.setItem('categories', JSON.stringify(categories));
         window.dispatchEvent(new Event('dataUpdated'));
         return newCategory;
+    }
+
+    static deleteCategory(name) {
+        let categories = this.getCategories();
+        categories = categories.filter(c => c.name !== name);
+        localStorage.setItem('categories', JSON.stringify(categories));
+        window.dispatchEvent(new Event('dataUpdated'));
     }
 
     // --- Items ---
@@ -216,17 +212,26 @@ class DataStore {
         return newItem;
     }
 
+    static deleteItem(id) {
+        let items = this.getItems();
+        items = items.filter(i => i.id !== id);
+        localStorage.setItem('items', JSON.stringify(items));
+        window.dispatchEvent(new Event('dataUpdated'));
+    }
+
     // --- Customers ---
     static getCustomers() {
         return JSON.parse(localStorage.getItem('customers')) || [];
     }
 
-    static addCustomer(name, contact) {
+    static addCustomer(name, contact, address, email) {
         const customers = this.getCustomers();
         const newCustomer = {
-            id: 'C' + String(customers.length + 1).padStart(3, '0'),
-            name: name,
-            contact: contact
+            id:      'C' + String(customers.length + 1).padStart(3, '0'),
+            name:    name,
+            contact: contact,
+            address: address,
+            email:   email
         };
         customers.push(newCustomer);
         localStorage.setItem('customers', JSON.stringify(customers));

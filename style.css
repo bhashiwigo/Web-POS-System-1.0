@@ -645,8 +645,9 @@ body {
 .pie-chart-container {
     flex: 1;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .chart-title {
@@ -696,25 +697,34 @@ body {
 /* Fast Moving Items mini grid */
 .items-grid-mini {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 10px;
+    max-height: 210px;
+    overflow-y: auto;
+    padding: 4px 4px 4px 0;
+    align-content: start;
 }
 
 .mini-item-box {
     background: linear-gradient(145deg, #E0B8B8, #CAAAAA);
     border-radius: 10px;
-    aspect-ratio: 1;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-size: 20px;
+    gap: 4px;
+    font-size: 18px;
     color: var(--color-dark);
     box-shadow: var(--shadow-card);
     cursor: pointer;
     transition: transform 0.2s ease;
     overflow: hidden;
     position: relative;
+    text-align: center;
+    padding: 6px 4px;
+    box-sizing: border-box;
 }
 
 .mini-item-box:hover { transform: scale(1.05); }
@@ -787,6 +797,39 @@ body {
     scrollbar-width: none;
 }
 .category-carousel::-webkit-scrollbar { display: none; }
+
+/* Delete buttons on cards */
+.btn-delete-category,
+.btn-delete-item {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(139, 38, 32, 0.15);
+    color: var(--color-accent-red-dark);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    z-index: 5;
+    line-height: 1;
+}
+
+.category-card:hover .btn-delete-category,
+.item-card:hover .btn-delete-item {
+    opacity: 1;
+}
+
+.btn-delete-category:hover,
+.btn-delete-item:hover {
+    background: rgba(139, 38, 32, 0.35) !important;
+}
 
 .category-card {
     min-width: 175px;
@@ -869,7 +912,7 @@ body {
 /* Items Grid (Cart) */
 .items-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     flex-grow: 1;
     overflow-y: auto;
@@ -886,7 +929,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 16px 14px 14px;
-    min-height: 190px;
+    height: 230px;  /* fixed height so all cards are identical */
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: var(--shadow-card);
@@ -900,11 +943,11 @@ body {
 
 /* Image placeholder within item card */
 .item-placeholder {
-    width: 90px;
-    height: 90px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(145deg, #EDD4D4, #DFC0C0);
     border-radius: 50%;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -956,6 +999,8 @@ body {
     transition: all 0.2s ease;
     letter-spacing: 0.3px;
     box-shadow: var(--shadow-btn);
+    flex-shrink: 0;  /* prevent button from being squished */
+    margin-top: auto;
 }
 .btn-add-cart:hover {
     background: var(--color-gradient-card-hover);
@@ -1353,21 +1398,23 @@ body {
 }
 
 .analysis-metrics {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    min-width: 200px;
-    max-width: 260px;
+    gap: 10px;
+    width: 220px;
+    flex-shrink: 0;
+    overflow-y: auto;       /* scroll if they still overflow */
+    padding-bottom: 4px;
 }
 
 .analysis-metrics .metric-card {
-    flex: 1;
-    min-height: 100px;
+    min-height: 90px;
+    flex-shrink: 0;         /* prevent cards from being squished */
 }
 
 .analysis-table-container {
-    flex: 2;
+    flex: 1;
+    min-width: 0;
     margin: 0;
     overflow-y: auto;
 }
@@ -1763,6 +1810,104 @@ input:checked + .slider::before {
 }
 
 .modal-panel .login-title { margin-bottom: 32px; font-size: 28px; }
+
+/* ── Logout Confirmation Card ── */
+.logout-confirm-card {
+    width: 90%;
+    max-width: 400px;
+    padding: 40px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    animation: fadeInScale 0.25s ease;
+}
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.logout-confirm-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(139, 38, 32, 0.18);
+    border: 2px solid rgba(139, 38, 32, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: var(--color-accent-red-dark);
+    margin-bottom: 4px;
+}
+
+.logout-confirm-title {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text-dark);
+    margin: 0;
+}
+
+.logout-confirm-msg {
+    font-size: 14px;
+    color: var(--color-text-mid);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.logout-confirm-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+}
+
+.logout-btn-cancel {
+    flex: 1;
+    max-width: 140px;
+    padding: 11px 20px;
+    border-radius: var(--border-radius-pill);
+    border: 1.5px solid var(--color-card-border);
+    background: transparent;
+    color: var(--color-text-dark);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.logout-btn-cancel:hover {
+    background: rgba(0,0,0,0.06);
+    border-color: var(--color-accent-red);
+}
+
+.logout-btn-confirm {
+    flex: 1;
+    max-width: 160px;
+    padding: 11px 20px;
+    border-radius: var(--border-radius-pill);
+    border: none;
+    background: var(--color-gradient-card);
+    color: var(--color-white);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-btn);
+}
+.logout-btn-confirm:hover {
+    background: var(--color-gradient-card-hover);
+    transform: translateY(-1px);
+}
 
 .modal-panel .input-field { margin-bottom: 8px; }
 

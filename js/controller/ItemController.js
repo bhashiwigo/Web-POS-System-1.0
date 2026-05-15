@@ -1,31 +1,26 @@
 class ItemController {
     constructor() {
+        this.activeCategory = null; // null = show all
+        this.searchQuery = '';
         this.initElements();
         this.bindEvents();
         this.renderAll();
     }
 
     initElements() {
-        // Buttons
-        this.btnAddCategory = document.getElementById('btn-add-category');
-        this.btnAddItem = document.getElementById('btn-add-item');
-        
-        // Overlays
+        this.btnAddCategory  = document.getElementById('btn-add-category');
+        this.btnAddItem      = document.getElementById('btn-add-item');
         this.categoryOverlay = document.getElementById('add-category-overlay');
-        this.itemOverlay = document.getElementById('add-item-overlay');
-
-        // Cancel buttons
+        this.itemOverlay     = document.getElementById('add-item-overlay');
         this.btnCancelCategory = document.getElementById('btn-cancel-category');
-        this.btnCancelItem = document.getElementById('btn-cancel-item');
-
-        // Forms
-        this.categoryForm = document.getElementById('add-category-form');
-        this.itemForm = document.getElementById('add-item-form');
-
-        // Containers
+        this.btnCancelItem   = document.getElementById('btn-cancel-item');
+        this.categoryForm    = document.getElementById('add-category-form');
+        this.itemForm        = document.getElementById('add-item-form');
         this.categoryCarousel = document.querySelector('#items .category-carousel');
-        this.itemsGrid = document.getElementById('items-grid');
+        this.itemsGrid       = document.getElementById('items-grid');
         this.categoryDropdown = document.getElementById('new-item-category');
+        this.searchInput     = document.getElementById('items-search-input');
+        this.btnSearch       = document.getElementById('btn-items-search');
     }
 
     bindEvents() {
@@ -35,7 +30,7 @@ class ItemController {
                 this.categoryOverlay.style.display = 'flex';
             });
         }
-        
+
         if (this.btnAddItem) {
             this.btnAddItem.addEventListener('click', () => {
                 this.populateCategoryDropdown();
@@ -58,40 +53,88 @@ class ItemController {
             });
         }
 
-        // Form submissions
+        // Add Category submit
         if (this.categoryForm) {
             this.categoryForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const name = document.getElementById('new-category-name').value;
-                const icon = document.getElementById('new-category-icon').value;
-                
+                const name = document.getElementById('new-category-name').value.trim();
+                const icon = document.getElementById('new-category-icon').value.trim() || 'fa-solid fa-tag';
                 DataStore.addCategory(name, icon);
-                NotificationService.show('Category added successfully!', 'success');
-                
+                NotificationService.showToast('Category added!', 'success');
                 this.categoryOverlay.style.display = 'none';
                 this.categoryForm.reset();
             });
         }
 
+        // Add Item submit
         if (this.itemForm) {
             this.itemForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const name = document.getElementById('new-item-name').value;
-                const price = document.getElementById('new-item-price').value;
+                const name     = document.getElementById('new-item-name').value.trim();
+                const price    = document.getElementById('new-item-price').value;
                 const category = document.getElementById('new-item-category').value;
-                
                 DataStore.addItem(name, price, category);
-                NotificationService.show('Item added successfully!', 'success');
-                
+                NotificationService.showToast('Item added!', 'success');
                 this.itemOverlay.style.display = 'none';
                 this.itemForm.reset();
             });
         }
 
-        // Listen for data updates
-        window.addEventListener('dataUpdated', () => {
-            this.renderAll();
-        });
+        // Real-time search
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', (e) => {
+                this.searchQuery = e.target.value.trim().toLowerCase();
+                this.renderItems();
+            });
+        }
+
+        // Search button
+        if (this.btnSearch) {
+            this.btnSearch.addEventListener('click', () => {
+                this.searchQuery = (this.searchInput?.value || '').trim().toLowerCase();
+                this.renderItems();
+            });
+        }
+
+        // Category card clicks + delete — event delegation on carousel
+        if (this.categoryCarousel) {
+            this.categoryCarousel.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.btn-delete-category');
+                if (deleteBtn) {
+                    e.stopPropagation();
+                    const catName = deleteBtn.dataset.category;
+                    if (confirm(`Delete category "${catName}"?`)) {
+                        DataStore.deleteCategory(catName);
+                        if (this.activeCategory === catName) this.activeCategory = null;
+                    }
+                    return;
+                }
+
+                const card = e.target.closest('.category-card');
+                if (card) {
+                    this.activeCategory = card.dataset.category || null;
+                    this.renderCategories();
+                    this.renderItems();
+                }
+            });
+        }
+
+        // Item delete — event delegation on grid
+        if (this.itemsGrid) {
+            this.itemsGrid.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.btn-delete-item');
+                if (deleteBtn) {
+                    e.stopPropagation();
+                    const itemId = deleteBtn.dataset.id;
+                    if (confirm('Delete this item?')) {
+                        DataStore.deleteItem(itemId);
+                    }
+                }
+            });
+        }
+
+        // Data updates
+        window.addEventListener('dataUpdated', () => this.renderAll());
     }
 
     renderAll() {
@@ -101,20 +144,21 @@ class ItemController {
 
     renderCategories() {
         if (!this.categoryCarousel) return;
-        
+
         const categories = DataStore.getCategories();
-        const items = DataStore.getItems();
-        
-        // We will keep the 'see-more-arrow' at the end
+        const items      = DataStore.getItems();
+
         let html = '';
-        
-        categories.forEach((cat, index) => {
-            // Count items in category
-            const count = items.filter(item => item.category === cat.name).length;
-            const activeClass = index === 0 ? 'active-category' : '';
-            
+        categories.forEach((cat) => {
+            const count      = items.filter(i => i.category === cat.name).length;
+            const isActive   = this.activeCategory === cat.name;
+            const activeClass = isActive ? 'active-category' : '';
+
             html += `
-                <div class="category-card ${activeClass}" data-category="${cat.name}">
+                <div class="category-card ${activeClass}" data-category="${cat.name}" style="position: relative;">
+                    <button class="btn-delete-category" data-category="${cat.name}" title="Delete category">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                     <div class="category-info">
                         <h3 class="category-name">${cat.name}</h3>
                         <p class="category-count">${count} Items</p>
@@ -126,57 +170,64 @@ class ItemController {
                 </div>
             `;
         });
-        
-        html += `
-            <div class="see-more-arrow" title="See more">
-                <i class="fa-solid fa-angles-right"></i>
-            </div>
-        `;
-        
+
         this.categoryCarousel.innerHTML = html;
     }
 
     renderItems() {
         if (!this.itemsGrid) return;
-        
-        const items = DataStore.getItems();
+
+        let items = DataStore.getItems();
+
+        // Filter by active category
+        if (this.activeCategory) {
+            items = items.filter(i => i.category === this.activeCategory);
+        }
+
+        // Filter by search query
+        if (this.searchQuery) {
+            items = items.filter(i => i.name.toLowerCase().includes(this.searchQuery));
+        }
+
+        if (items.length === 0) {
+            this.itemsGrid.innerHTML = `
+                <div style="padding: 20px; color: var(--color-text-light); font-style: italic; grid-column: 1 / -1; text-align: center;">
+                    No items found.
+                </div>`;
+            return;
+        }
+
         let html = '';
-        
         items.forEach(item => {
-            // Pick a random icon based on category for placeholder if needed, or a default one
-            let iconClass = 'fa-solid fa-box';
             const cat = DataStore.getCategories().find(c => c.name === item.category);
-            if (cat) {
-                iconClass = cat.icon;
-            }
-            
+            const iconClass = cat ? cat.icon : 'fa-solid fa-box';
+
             html += `
-                <div class="item-card">
+                <div class="item-card" style="position: relative;">
+                    <button class="btn-delete-item" data-id="${item.id}" title="Delete item">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                     <div class="item-placeholder"><i class="${iconClass}"></i></div>
                     <h3 class="item-name">${item.name}</h3>
-                    <p style="font-size: 12px; color: #666; margin-top: 4px;">$${item.price.toFixed(2)}</p>
+                    <p class="item-price">$${item.price.toFixed(2)}</p>
                 </div>
             `;
         });
-        
+
         this.itemsGrid.innerHTML = html;
     }
 
     populateCategoryDropdown() {
         if (!this.categoryDropdown) return;
-        
         const categories = DataStore.getCategories();
         let html = '<option value="">Select Category</option>';
-        
         categories.forEach(cat => {
             html += `<option value="${cat.name}">${cat.name}</option>`;
         });
-        
         this.categoryDropdown.innerHTML = html;
     }
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new ItemController();
 });

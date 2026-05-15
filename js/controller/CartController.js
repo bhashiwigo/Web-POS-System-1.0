@@ -265,7 +265,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Save Transaction
             DataStore.addTransaction(netTotal, cartItems);
-            DataStore.addSaleToChart(netTotal); // update chart stats immediately
+
+            // Deduct stock qty for each cart item
+            const allItems = DataStore.getItems();
+            cartItems.forEach(cartItem => {
+                const idx = allItems.findIndex(i => i.id === cartItem.item.id);
+                if (idx !== -1) {
+                    allItems[idx].qty = Math.max(0, (allItems[idx].qty || 0) - cartItem.quantity);
+                }
+            });
+            localStorage.setItem('items', JSON.stringify(allItems));
 
             // Reset UI
             cartItems = [];
